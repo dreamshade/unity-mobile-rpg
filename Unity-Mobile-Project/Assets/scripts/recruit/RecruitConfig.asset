@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78bdf464b4a983744b2dae880de711a2, type: 3}
+  m_Name: RecruitConfig
+  m_EditorClassIdentifier: 
+  minTotalRankPoints: 100
+  maxTotalRankPoints: 400
+  totalPointsSkew: 2
+  antiDominanceAlpha: 0
+  compareToCurrentMin: 0
+  spikeStartChance: 0.01
+  spikeLengthRange: {x: 2, y: 6}
+  spikeAlpha: 2
+  startingLevel: 1
