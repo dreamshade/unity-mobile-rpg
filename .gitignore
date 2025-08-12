@@ -98,3 +98,6 @@ InitTestScene*.unity*
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 /Unity-Mobile-Project/Library
+/Unity-Mobile-Project/Temp
+/Unity-Mobile-Project/UserSettings
+/Unity-Mobile-Project/UserSettings
