@@ -1,6 +1,8 @@
 // RecruitGenerator.cs
 using UnityEngine;
 using System;
+using Dreamshade.Characters;
+using Dreamshade.Items;
 
 public static class RecruitGenerator
 {
@@ -126,4 +128,23 @@ public static class RecruitGenerator
         for (int i = 0; i < a.Length; i++) s += a[i];
         return (float)s / a.Length;
     }
-}
+
+       // Easy wrapper for beginners: roll a fresh ranks array from a RecruitConfig.
+    public static int[] GenerateRanks(RecruitConfig cfg)
+    {
+        if (cfg == null)
+        {
+            Debug.LogError("[RecruitGenerator] GenerateRanks called with null cfg.");
+            return null;
+        }
+
+        // 1) Decide how many total points we get to spend
+        int total = RollTotalPoints(cfg);
+
+        // 2) Distribute those points across the 6 stats in enum order
+        //    (STR, DEF, VIT, PTY, INT, AGI) as defined in AllStats.
+        int[] ranks = AllocateWithAntiDominance(total, cfg);
+
+        return ranks;
+    }
+};

@@ -1,7 +1,7 @@
 // Assets/scripts/items/RecruitClass.cs
 using System;
 
-namespace Dreamshade.Items
+namespace Dreamshade.Characters
 {
     /// Flags lets a recruit belong to multiple classes (e.g., Warrior|Rogue).
     [Flags]

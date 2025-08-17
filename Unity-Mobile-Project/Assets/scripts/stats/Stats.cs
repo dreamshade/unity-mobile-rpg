@@ -6,5 +6,6 @@ public enum StatType
     VIT,  // Vitality
     PTY,  // Piety
     INT,  // Intelligence
-    AGI   // Agility
+    AGI,   // Agility
+    DEX, // Dexterity
 }

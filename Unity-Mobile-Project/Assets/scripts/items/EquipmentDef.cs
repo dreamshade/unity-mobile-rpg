@@ -1,6 +1,6 @@
 // Assets/scripts/items/EquipmentDef.cs
 using UnityEngine;
-
+using Dreamshade.Characters;
 namespace Dreamshade.Items
 {
     /// Child of Item that can be equipped.
