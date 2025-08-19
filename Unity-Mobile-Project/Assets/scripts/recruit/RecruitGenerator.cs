@@ -1,14 +1,14 @@
 // RecruitGenerator.cs
 using UnityEngine;
 using System;
+using System.Linq;
 using Dreamshade.Characters;
 using Dreamshade.Items;
 
 public static class RecruitGenerator
 {
-    // Order of stats matches your enum order
-    public static readonly StatType[] AllStats =
-        { StatType.STR, StatType.DEF, StatType.VIT, StatType.PTY, StatType.INT, StatType.AGI };
+    // Dynamically get all stats from the enum - no more manual listing!
+    public static StatType[] AllStats => Enum.GetValues(typeof(StatType)).Cast<StatType>().ToArray();
 
     public static CharacterStats GenerateCharacter(GameObject host, RecruitConfig cfg, StatConfig statCfg)
     {
@@ -26,17 +26,18 @@ public static class RecruitGenerator
         // 1) choose total points with a skew toward low totals
         int total = RollTotalPoints(cfg);
 
-        // 2) allocate across 6 stats with anti-dominance + rare spikes
+        // 2) allocate across all stats with anti-dominance + rare spikes
         int[] ranks = AllocateWithAntiDominance(total, cfg);
 
         // 3) apply to CharacterStats (levels start at cfg.startingLevel)
         stats.CHAR_level = cfg.startingLevel;
-        stats.SetRank(StatType.STR, ranks[0]);
-        stats.SetRank(StatType.DEF, ranks[1]);
-        stats.SetRank(StatType.VIT, ranks[2]);
-        stats.SetRank(StatType.PTY, ranks[3]);
-        stats.SetRank(StatType.INT, ranks[4]);
-        stats.SetRank(StatType.AGI, ranks[5]);
+        
+        // Iterate through all stat types dynamically
+        var statTypes = AllStats;
+        for (int i = 0; i < statTypes.Length && i < ranks.Length; i++)
+        {
+            stats.SetRank(statTypes[i], ranks[i]);
+        }
         
         stats.RecalculatePreviewsContext();
 
@@ -55,7 +56,7 @@ public static class RecruitGenerator
 
     static int[] AllocateWithAntiDominance(int totalPoints, RecruitConfig cfg)
     {
-        int n = AllStats.Length; // 6
+        int n = AllStats.Length; // Dynamically get the number of stats
         int[] vals = new int[n]; // start at 0 each
 
         int spikeRemaining = 0;
@@ -129,7 +130,7 @@ public static class RecruitGenerator
         return (float)s / a.Length;
     }
 
-       // Easy wrapper for beginners: roll a fresh ranks array from a RecruitConfig.
+    // Easy wrapper for beginners: roll a fresh ranks array from a RecruitConfig.
     public static int[] GenerateRanks(RecruitConfig cfg)
     {
         if (cfg == null)
@@ -141,10 +142,10 @@ public static class RecruitGenerator
         // 1) Decide how many total points we get to spend
         int total = RollTotalPoints(cfg);
 
-        // 2) Distribute those points across the 6 stats in enum order
-        //    (STR, DEF, VIT, PTY, INT, AGI) as defined in AllStats.
+        // 2) Distribute those points across all stats dynamically
+        //    The order follows the enum order in StatType
         int[] ranks = AllocateWithAntiDominance(total, cfg);
 
         return ranks;
     }
-};
+}

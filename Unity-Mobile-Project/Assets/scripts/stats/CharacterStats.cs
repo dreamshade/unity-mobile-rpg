@@ -1,6 +1,7 @@
 // CharacterStats.cs
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 [Serializable]
@@ -34,14 +35,11 @@ public class CharacterStats : MonoBehaviour
 
     // ---------- RUNTIME CACHE ----------
     private int[] rankByType;
+    private Dictionary<StatType, float> _statCache;
 
-    // Convenience properties:
-    public float STR => GetStat(StatType.STR);
-    public float DEF => GetStat(StatType.DEF);
-    public float VIT => GetStat(StatType.VIT);
-    public float PTY => GetStat(StatType.PTY);
-    public float INT => GetStat(StatType.INT);
-    public float AGI => GetStat(StatType.AGI);
+    /* Dynamic convenience properties - will work for any stats in the enum
+     These specific ones are kept for backward compatibility*/
+    public float this[StatType type] => GetStat(type);
 
     // ---------- PUBLIC API ----------
     public float GetStat(StatType type)
@@ -50,14 +48,22 @@ public class CharacterStats : MonoBehaviour
         if (statConfig == null)   // guard
             return 0f;
 
-        int rank = rankByType[(int)type];
+        // Check if we have this stat type in our cache
+        int typeIndex = (int)type;
+        if (typeIndex < 0 || typeIndex >= rankByType.Length)
+            return 0f;
+
+        int rank = rankByType[typeIndex];
         return StatCalculator.CalculateStat(rank, CHAR_level, statConfig);
     }
 
     public int GetRank(StatType type)
     {
         EnsureCache();
-        return rankByType[(int)type];
+        int typeIndex = (int)type;
+        if (typeIndex < 0 || typeIndex >= rankByType.Length)
+            return 1;
+        return rankByType[typeIndex];
     }
 
     public void SetRank(StatType type, int value)
@@ -79,6 +85,35 @@ public class CharacterStats : MonoBehaviour
 
         RebuildCache();
         UpdatePreviews();
+    }
+
+    // Get all stats as a dictionary (useful for iteration)
+    public Dictionary<StatType, float> GetAllStats()
+    {
+        if (_statCache == null)
+            _statCache = new Dictionary<StatType, float>();
+        
+        _statCache.Clear();
+        
+        foreach (StatType statType in Enum.GetValues(typeof(StatType)))
+        {
+            _statCache[statType] = GetStat(statType);
+        }
+        
+        return _statCache;
+    }
+
+    // Get all ranks as a dictionary
+    public Dictionary<StatType, int> GetAllRanks()
+    {
+        var allRanks = new Dictionary<StatType, int>();
+        
+        foreach (StatType statType in Enum.GetValues(typeof(StatType)))
+        {
+            allRanks[statType] = GetRank(statType);
+        }
+        
+        return allRanks;
     }
 
     // ---------- UNITY LIFECYCLE ----------
@@ -146,25 +181,21 @@ public class CharacterStats : MonoBehaviour
 
     private void EnsureAllStatsPresent()
     {
-        int n = EnumCount<StatType>();
-        for (int i = 0; i < n; i++)
+        // Dynamically iterate through all stat types in the enum
+        foreach (StatType statType in Enum.GetValues(typeof(StatType)))
         {
-            var t = (StatType)i;
-            if (!ranks.Exists(s => s.type == t))
-                ranks.Add(new StatRank { type = t, rank = 1 });
+            if (!ranks.Exists(s => s.type == statType))
+                ranks.Add(new StatRank { type = statType, rank = 1 });
         }
     }
 
     private void EnsurePreviewListPresent()
     {
-        int n = EnumCount<StatType>();
-
-        // ensure one entry for each StatType
-        for (int i = 0; i < n; i++)
+        // Dynamically ensure one preview entry for each StatType
+        foreach (StatType statType in Enum.GetValues(typeof(StatType)))
         {
-            var t = (StatType)i;
-            if (!previews.Exists(p => p.type == t))
-                previews.Add(new StatPreview { type = t, value = 0f });
+            if (!previews.Exists(p => p.type == statType))
+                previews.Add(new StatPreview { type = statType, value = 0f });
         }
 
         // sort to match enum order

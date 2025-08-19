@@ -1,6 +1,7 @@
 // Assets/scripts/recruit/Recruit.cs
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Dreamshade.Characters;
 using Dreamshade.Items;
@@ -19,9 +20,22 @@ public sealed class Recruit : ScriptableObject
     [Header("Progression")]
     [SerializeField, Min(1)] private int level = 1;
 
-    // Ranks per StatType - using a custom serializable class for better Inspector display
+    // Store ranks in a dictionary-like structure that auto-populates from enum
     [Header("Stats")]
-    [SerializeField] private StatRanks statRanks = new StatRanks();
+    [SerializeField] private List<StatRankEntry> statRanks = new List<StatRankEntry>();
+
+    [Serializable]
+    public class StatRankEntry
+    {
+        public StatType statType;
+        [Min(1)] public int rank = 1;
+
+        public StatRankEntry(StatType type, int rankValue = 1)
+        {
+            statType = type;
+            rank = Mathf.Max(1, rankValue);
+        }
+    }
 
     [Serializable]
     public struct EquipmentSlotEntry
@@ -39,71 +53,52 @@ public sealed class Recruit : ScriptableObject
     public int Level => level;
     public IReadOnlyList<EquipmentSlotEntry> EquipmentSlots => equipmentSlots;
 
-    // Serializable wrapper for stat ranks with better Inspector display
-    [Serializable]
-    public class StatRanks
+    // Initialize stat ranks list with all enum values if needed
+    private void EnsureStatRanksInitialized()
     {
-        [Header("Base Stats")]
-        [SerializeField, Min(1)] private int strength = 1;
-        [SerializeField, Min(1)] private int defense = 1;
-        [SerializeField, Min(1)] private int vitality = 1;
-        [SerializeField, Min(1)] private int piety = 1;
-        [SerializeField, Min(1)] private int intelligence = 1;
-        [SerializeField, Min(1)] private int agility = 1;
-
-        public int GetRank(StatType type)
+        var allStatTypes = Enum.GetValues(typeof(StatType)).Cast<StatType>().ToList();
+        
+        // Remove any duplicates or invalid entries
+        var validRanks = new List<StatRankEntry>();
+        foreach (var statType in allStatTypes)
         {
-            return type switch
+            var existing = statRanks.FirstOrDefault(r => r.statType == statType);
+            if (existing != null)
             {
-                StatType.STR => strength,
-                StatType.DEF => defense,
-                StatType.VIT => vitality,
-                StatType.PTY => piety,
-                StatType.INT => intelligence,
-                StatType.AGI => agility,
-                _ => 1
-            };
-        }
-
-        public void SetRank(StatType type, int value)
-        {
-            value = Mathf.Max(1, value);
-            switch (type)
+                validRanks.Add(existing);
+            }
+            else
             {
-                case StatType.STR: strength = value; break;
-                case StatType.DEF: defense = value; break;
-                case StatType.VIT: vitality = value; break;
-                case StatType.PTY: piety = value; break;
-                case StatType.INT: intelligence = value; break;
-                case StatType.AGI: agility = value; break;
+                validRanks.Add(new StatRankEntry(statType, 1));
             }
         }
-
-        // Initialize from array (for procedural generation)
-        public void InitializeFromArray(int[] ranks)
-        {
-            if (ranks == null || ranks.Length < 6) return;
-            strength = Mathf.Max(1, ranks[0]);
-            defense = Mathf.Max(1, ranks[1]);
-            vitality = Mathf.Max(1, ranks[2]);
-            piety = Mathf.Max(1, ranks[3]);
-            intelligence = Mathf.Max(1, ranks[4]);
-            agility = Mathf.Max(1, ranks[5]);
-        }
-
-        // Export to array
-        public int[] ToArray()
-        {
-            return new int[] { strength, defense, vitality, piety, intelligence, agility };
-        }
+        
+        statRanks = validRanks;
     }
 
     // Public methods for accessing/modifying stats
-    public int GetRank(StatType type) => statRanks.GetRank(type);
+    public int GetRank(StatType type)
+    {
+        EnsureStatRanksInitialized();
+        var entry = statRanks.FirstOrDefault(r => r.statType == type);
+        return entry != null ? entry.rank : 1;
+    }
     
     public void SetRank(StatType type, int value)
     {
-        statRanks.SetRank(type, value);
+        EnsureStatRanksInitialized();
+        value = Mathf.Max(1, value);
+        
+        var entry = statRanks.FirstOrDefault(r => r.statType == type);
+        if (entry != null)
+        {
+            entry.rank = value;
+        }
+        else
+        {
+            statRanks.Add(new StatRankEntry(type, value));
+        }
+        
         #if UNITY_EDITOR
         UnityEditor.EditorUtility.SetDirty(this);
         #endif
@@ -116,9 +111,16 @@ public sealed class Recruit : ScriptableObject
         job = recruitClass;
         level = Mathf.Max(1, recruitLevel);
         
-        if (ranks != null && ranks.Length >= 6)
+        // Initialize ranks from array using enum order
+        if (ranks != null)
         {
-            statRanks.InitializeFromArray(ranks);
+            var statTypes = Enum.GetValues(typeof(StatType)).Cast<StatType>().ToArray();
+            statRanks.Clear();
+            
+            for (int i = 0; i < statTypes.Length && i < ranks.Length; i++)
+            {
+                statRanks.Add(new StatRankEntry(statTypes[i], ranks[i]));
+            }
         }
 
         equipmentSlots.Clear();
@@ -143,12 +145,11 @@ public sealed class Recruit : ScriptableObject
         stats.statConfig = statCfg;
         stats.CHAR_level = level;
 
-        stats.SetRank(StatType.STR, GetRank(StatType.STR));
-        stats.SetRank(StatType.DEF, GetRank(StatType.DEF));
-        stats.SetRank(StatType.VIT, GetRank(StatType.VIT));
-        stats.SetRank(StatType.PTY, GetRank(StatType.PTY));
-        stats.SetRank(StatType.INT, GetRank(StatType.INT));
-        stats.SetRank(StatType.AGI, GetRank(StatType.AGI));
+        // Iterate through all stat types instead of manually listing them
+        foreach (StatType statType in Enum.GetValues(typeof(StatType)))
+        {
+            stats.SetRank(statType, GetRank(statType));
+        }
 
         stats.RecalculatePreviewsContext();
         return stats;
@@ -161,10 +162,23 @@ public sealed class Recruit : ScriptableObject
         instance.recruitName = recruitName;
         instance.job = job;
         instance.level = level;
-        instance.statRanks = new StatRanks();
-        instance.statRanks.InitializeFromArray(statRanks.ToArray());
+        instance.statRanks = new List<StatRankEntry>(statRanks);
         instance.equipmentSlots = new List<EquipmentSlotEntry>(equipmentSlots);
         return instance;
+    }
+
+    // Convert ranks to array in enum order (for compatibility with existing code)
+    public int[] GetRanksAsArray()
+    {
+        var statTypes = Enum.GetValues(typeof(StatType)).Cast<StatType>().ToArray();
+        var ranks = new int[statTypes.Length];
+        
+        for (int i = 0; i < statTypes.Length; i++)
+        {
+            ranks[i] = GetRank(statTypes[i]);
+        }
+        
+        return ranks;
     }
 
     // Static factory method for creating recruits at runtime with procedural generation
@@ -245,5 +259,7 @@ public sealed class Recruit : ScriptableObject
         level = Mathf.Max(1, level);
         if (string.IsNullOrWhiteSpace(recruitName))
             recruitName = "Recruit";
+        
+        EnsureStatRanksInitialized();
     }
 }

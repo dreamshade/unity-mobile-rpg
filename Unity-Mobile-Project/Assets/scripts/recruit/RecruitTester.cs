@@ -1,5 +1,6 @@
 // RecruitTester.cs
 using System;
+using System.Linq;
 using UnityEngine;
 
 public class RecruitTester : MonoBehaviour
@@ -9,9 +10,6 @@ public class RecruitTester : MonoBehaviour
 
     [Range(1, 10)] public int generateCount = 3;
 
-    // cache the enum list once
-    private static readonly StatType[] AllTypes = (StatType[])Enum.GetValues(typeof(StatType));
-
     [ContextMenu("Generate Recruits")]
     public void GenerateRecruits()
     {
@@ -20,6 +18,9 @@ public class RecruitTester : MonoBehaviour
             Debug.LogError("[RecruitTester] Assign RecruitConfig and StatConfig.");
             return;
         }
+
+        // Get all stat types dynamically from the enum
+        var allStatTypes = Enum.GetValues(typeof(StatType)).Cast<StatType>().ToArray();
 
         for (int i = 0; i < generateCount; i++)
         {
@@ -36,14 +37,15 @@ public class RecruitTester : MonoBehaviour
             string ranksStr = "";
             string valsStr  = "";
 
-            foreach (var t in AllTypes)
+            // Iterate through all stat types dynamically
+            foreach (var statType in allStatTypes)
             {
-                int r = cs.GetRank(t);
-                float v = cs.GetStat(t);
+                int r = cs.GetRank(statType);
+                float v = cs.GetStat(statType);
                 totalRank += r;
 
-                ranksStr += $"{t}={r}, ";
-                valsStr  += $"{t}:{v:0.##}, ";
+                ranksStr += $"{statType}={r}, ";
+                valsStr  += $"{statType}:{v:0.##}, ";
             }
 
             // trim trailing comma+space
